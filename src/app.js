@@ -3,7 +3,7 @@ import cors from "cors"
 import cookieParser from "cookie-parser";
 
 
-const app = require('express');
+const app = express();
 
 app.use(cors({
     origin : process.env.CORS_ORIGIN,
@@ -21,14 +21,19 @@ app.use(express.urlencoded({
     extended : true
 }))
 
+app.use(express.static("public"))
 app.use(cookieParser())
 
 
+//routes Import
 
-app.use(express.static("public"))
+import userRouter from './routes/user.routes.js'
 
+//routes declaration
+//prefix http://localhost:8000/api/v1/users calls user.routes.js and becomes
+//http://localhost:8000/api/users/register
 
-
+app.use("/api/v1/users", userRouter)
 
 
 

@@ -69,7 +69,7 @@ const userSchema = mongoose.Schema({
 userSchema.pre( "save", async function(next){
     if(!this.isModified("password")) return next() // we want to run this only when password feild is sent or any changes is made
 
-    this.password = bcrypt.hash(this.password, 10)
+    this.password = await bcrypt.hash(this.password, 10)
     next()
 })
 // creating custom hooks

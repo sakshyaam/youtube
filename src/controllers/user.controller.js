@@ -1,75 +1,58 @@
-import {asyncHandler} from "../utils/asyncHandler.js"
-import {ApiError} from "../utils/ApiError.js"
-import {User} from "../models/user.model.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js"
-import { ApiResponse } from "../utils/ApiResponse.js"
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+import { User } from "../models/user.model.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
-const registerUser = asyncHandler( async (req,res) =>
-{
-    const {fullname, email, username, password} = req.body
-    console.log("email:", email); 
+const registerUser = asyncHandler(async (req, res) => {
+    const { fullname, email, username, password } = req.body;
 
-    if( [fullname , email, username, password].some(() => field?.trim() === "")  //if field -> trim -> if that is empty -> returns true
-
-    ){
-        throw new ApiError(400, "All fields are required")
-
-    }
-    const existedUser = User.findOne({
-        $or : [{ username }, { email }] // if username or email is present, return true
-
-    })
-
-    if (existedUser)
-    {
-        throw new ApiError(409, "User with email or Username already exits")
+    if ([fullname, email, username, password].some((field) => !field || field.trim() === "")) {
+        throw new ApiError(400, "All fields are required");
     }
 
-    // this is possible through mutler. Files comes. 
-    // [0] -> first property -> path
-    //stores the local path to the variable
-    const avatarLocalPath = req.files?.avatar[0]?.path
+    const existedUser = await User.findOne({
+        $or: [{ username }, { email }]
+    });
 
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
-
-    if(!avatarLocalPath){
-        throw new ApiError(400, "Avator is required");
+    if (existedUser) {
+        throw new ApiError(409, "User with email or username already exists");
     }
 
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    const avatarLocalPath = req.files?.avatar?.[0]?.path;
+    const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
 
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
-
-    if(!avatar) {
-        throw new ApiError(400, "Avator file is required");
+    if (!avatarLocalPath) {
+        throw new ApiError(400, "Avatar file is required");
     }
 
-    const user = await User.create(
-        {
-            fullname,
-            avatar: avatar.url,
-            coverImage: coverImage?.url || "",
-            email,
-            password,
-            username : username.toLowerCase()
-        }
-    )
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    const coverImage = coverImageLocalPath
+        ? await uploadOnCloudinary(coverImageLocalPath)
+        : null;
 
-    //mongodb auto adds _id field on every entry -> so we can
-    // .select selects all the field. But the minus is discarded from that selection
-    const createdUser = await User.findById(user._id).select(
-        "-password -refreshToken" 
-    )
+    if (!avatar) {
+        throw new ApiError(400, "Avatar upload failed");
+    }
 
-    if(!createdUser)
-    {
-        throw new ApiError(500, "Something went wrong when registering the user");
+    const user = await User.create({
+        fullname,
+        avatar: avatar.secure_url,
+        coverImage: coverImage?.secure_url || "",
+        email,
+        password,
+        username: username.toLowerCase()
+    });
+
+    const createdUser = await User.findById(user._id).select("-password -refreshToken");
+
+    if (!createdUser) {
+        throw new ApiError(500, "Something went wrong while registering user");
     }
 
     return res.status(201).json(
-        new ApiResponse(200, createdUser, "User Registered Successfully")
-    )
-} )
+        new ApiResponse(201, createdUser, "User registered successfully")
+    );
+});
 
-
-export {registerUser};
+export { registerUser };

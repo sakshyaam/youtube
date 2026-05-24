@@ -65,12 +65,12 @@ const userSchema = mongoose.Schema({
 }
 )
 
-
+// removed next() beacuase as it is async, Mongoose waits for the promise to finish.
 userSchema.pre( "save", async function(next){
-    if(!this.isModified("password")) return next() // we want to run this only when password feild is sent or any changes is made
+    if(!this.isModified("password")) return;// we want to run this only when password feild is sent or any changes is made
 
     this.password = await bcrypt.hash(this.password, 10)
-    next()
+    
 })
 // creating custom hooks
 userSchema.methods.isPasswordCorrect = async function(password) {
